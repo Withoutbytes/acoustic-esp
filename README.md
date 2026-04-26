@@ -24,133 +24,124 @@ Example video in the repository root: [`demonstration.mp4`](demonstration.mp4)
 ### Screenshots
 
 | Collector UI | In-game Demo |
-|---|---|
+|:---:|:---:|
 | ![Collector UI](prints/collector-ui.png) | ![In-game Demo](prints/in-game-demo-ui.png) |
 
 ---
 
 ## Overview
 
-**Acoustic radar** project: estimate **direction (angle)** and **relative distance** to the player from captured audio (e.g. footsteps), using **stereo + machine learning**, instead of relying on **8 raw surround 7.1 channels**.
+**Acoustic radar** project: estimate **direction (angle)** and **relative distance** to the player from captured audio (e.g. footsteps), using **stereo + machine learning**, instead of relying on 8 raw surround 7.1 channels.
 
 ---
 
-## Intent & Difference from "7.1 ESP"
+## How it Works & Difference from "7.1 ESP"
 
-Many approaches try to read each virtual speaker of the **7.1 mix** (FL, FR, RL, RR, etc.) to determine the sound's origin. This repository is **not** focused on that path.
+Many approaches try to read each virtual speaker of the **7.1 mix** (FL, FR, RL, RR, etc.) to determine sound origin. This repository takes a different path:
 
-The main flow here is:
+1. Capture a **stereo** signal (L/R) routed through a virtual cable (e.g. VB-Audio Cable)
+2. Extract **frequency-domain features** — L/R correlation, phase, energy per band — the same cues the brain uses with two ears
+3. Train a **scikit-learn** classifier to map those features to discrete **angles** (0°, 45°, …, 315°), using **intensity** as a proxy for distance
 
-1. Capture a **stereo** signal (left/right) — e.g. the game's output routed through a **virtual cable** (VB-Audio Cable, etc.)
-2. Extract **features** in the frequency domain, L/R correlation, phase, energy per band — the same cues the brain uses with **two ears**
-3. Train a **scikit-learn** classifier to map these features to discrete **angles** (0°, 45°, …, 315°) and use **intensity** as a proxy for **"how close"** on the radar
+When the game outputs audio through **HRTF** (*Head-Related Transfer Function*), the stereo pair already encodes directional information — no need to decode 7.1 channel by channel. The model learns those patterns directly from the L/R signal.
 
-When the game is in **headphones with spatialization**, what usually arrives at the cable is **stereo already processed** by something equivalent to **HRTF** (*Head-Related Transfer Function*). So: it's **not** necessary to decode 7.1 channel by channel; the model learns patterns in the **L/R pair** that the game + HRTF already conditioned to direction.
-
-The `radar_surround.py` script is the **heuristic / multichannel** variant (surround when the device has 6+ inputs). The recommended flow for the "stereo + HRTF + ML" design is **`collector.py` → `train.py` → `radar_ml.py`**.
+> `radar_surround.py` is the heuristic/multichannel variant for when the device exposes 6+ channels. The main recommended flow is **`collector.py` → `train.py` → `radar_ml.py`**.
 
 ---
 
 ## Roadmap
 
-1. **Current phase — acoustic radar**
-   Indicate **direction** and **relative visual distance** (radius on radar) relative to the player, based on sound events (e.g. footsteps).
+| Phase | Status | Description |
+|-------|--------|-------------|
+| Acoustic radar | ✅ Current | Direction + relative distance on a 2D radar from sound events |
+| Acoustic wallhack | 🔜 Planned | Keep last estimated position / recent trail on screen, not just a momentary ping |
 
-2. **Desired evolution**
-   Move toward an **acoustic "wallhack"**: keep on the map/screen the **last estimated position** (or recent trail) derived from noise, not just a momentary ping.
-
-*(Phase 2 depends on minimap/world space integration; the repository today delivers the detection + angle + radar UI core.)*
+> Phase 2 depends on minimap/world space integration.
 
 ---
 
 ## Prerequisites
 
-- **Python 3.10+** (3.11 or 3.12 recommended on Windows)
-- **VB-Audio Virtual Cable** (or equivalent): game sends audio to the cable; Python **records** from it as input
-- On Windows: game output → **CABLE Input**; the Python app uses **CABLE Output** as **microphone input** (names may vary slightly — the code looks for devices whose name contains `"CABLE"`)
+- Python 3.10+ (3.11 or 3.12 recommended on Windows)
+- A **7.1 audio device** set as primary output — or a virtual one (see setup below)
+- **VB-Audio Virtual Cable** or equivalent for audio routing
 
 ---
 
-## Audio Device Setup
+## Step 1 — Audio Device Setup
 
-You need a **7.1 audio device** set as your primary speaker. If your sound card or headphones don't support it natively, use a virtual audio device instead.
+> **Reference / inspiration:** [CanetisRadar by SamuelTulach](https://github.com/SamuelTulach/CanetisRadar)
 
-> **Inspired by / reference:** [CanetisRadar by SamuelTulach](https://github.com/SamuelTulach/CanetisRadar)
+You need a **7.1 surround device** as your default playback device. Check if your sound card or headset already supports it — if it does, skip to Step 2.
 
-### Option 1 — Use your existing device
-Check if your sound card or headphones already support 7.1 surround. If yes, skip to the main setup.
+Otherwise, use a virtual audio device:
 
-### Option 2 — Virtual audio device (recommended)
-
-1. Download **[VB-Cable](https://www.vb-audio.com/Cable/)** (or the better alternative: **[Razer Surround](https://www.razer.com/surround)**)
-2. Install it
-3. Reboot your PC
-4. Open **Sound Settings → Playback tab**
-5. Set **CABLE Input** as default device
-6. Click **Configure** → set to **7.1 Surround** and enable all speakers
-7. Go to **Recording tab**
-8. Click on **CABLE Output** → **Properties → Listen tab**
-9. Check **"Listen to this device"**
-10. Set your normal playback device (your actual headphones/speakers)
-11. Done — game audio will now route through the virtual 7.1 device
+1. Download **[VB-Cable](https://www.vb-audio.com/Cable/)** *(or the better alternative: **[Razer Surround](https://www.razer.com/surround)**)*
+2. Install and **reboot your PC**
+3. Open **Sound Settings → Playback tab**
+4. Set **CABLE Input** as the default device
+5. Click **Configure** → select **7.1 Surround** and enable all speakers
+6. Go to **Recording tab** → click **CABLE Output** → **Properties**
+7. Go to **Listen tab** → check **"Listen to this device"**
+8. Set your actual headphones/speakers as the playback device
+9. Done — game audio now routes through the virtual 7.1 device
 
 ---
 
-## Windows Setup
+## Step 2 — Python Setup
 
-1. **Install Python** at [python.org](https://www.python.org/downloads/) — check **"Add python.exe to PATH"**
+1. Install Python at [python.org](https://www.python.org/downloads/) — check **"Add python.exe to PATH"**
 
-2. **Virtual environment** (recommended), in the project folder:
+2. Create a virtual environment:
 ```powershell
-   cd C:\path\to\acoustic-esp
-   python -m venv .venv
-   .\.venv\Scripts\activate
+cd C:\path\to\acoustic-esp
+python -m venv .venv
+.\.venv\Scripts\activate
 ```
 
-3. **Dependencies**:
+3. Install dependencies:
 ```powershell
-   pip install -r requiriments.txt
+pip install -r requiriments.txt
 ```
 
-4. **PyAudio on Windows** — if `pip install PyAudio` fails:
-   - Use an [unofficial wheel compatible with your Python version](https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyaudio), or
-   - `pip install pipwin` then `pipwin install pyaudio`
+4. **PyAudio on Windows** — if `pip install PyAudio` fails, try:
+   - [Unofficial wheel](https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyaudio) — download the `.whl` for your Python version and run `pip install <file>.whl`
+   - Or: `pip install pipwin` then `pipwin install pyaudio`
 
-5. **Tkinter** — usually bundled with the official Python installer. If missing, reinstall with the **tcl/tk** component checked.
-
----
-
-## How to Run (Main Flow)
-
-| Step | Command | What it does |
-|------|---------|--------------|
-| 1. Collect data | `python collector.py` | Opens UI, records `samples.csv` when you press **numpad keys** as you hear a footstep in the indicated direction |
-| 2. Train model | `python train.py` | Reads `samples.csv`, trains and saves `model.pkl` |
-| 3. Live radar | `python radar_ml.py` | Uses `model.pkl` + stereo audio from cable; shows pings on radar |
-
-**Optional:** `python radar_surround.py` — radar **without trained model**, with **surround** logic when the device has 6+ channels.
+5. **Tkinter** — bundled with the official Python installer. If missing, reinstall Python and check the **tcl/tk** component.
 
 ---
 
-## Important Files
+## Step 3 — Running
+
+| # | Command | What it does |
+|---|---------|--------------|
+| 1 | `python collector.py` | Opens UI — press **numpad keys** as you hear footsteps to label directions → saves `samples.csv` |
+| 2 | `python train.py` | Reads `samples.csv`, trains classifier, saves `model.pkl` |
+| 3 | `python radar_ml.py` | Loads `model.pkl` + live stereo audio → shows directional pings on radar |
+
+**Optional:** `python radar_surround.py` — heuristic radar without ML, uses surround channels if the device exposes 6+.
+
+---
+
+## Files
 
 | File | Purpose |
 |------|---------|
-| `collector.py` | Labeled collection → `samples.csv` |
-| `train.py` | Training → `model.pkl` |
-| `radar_ml.py` | Radar with **ML** (stereo + `model.pkl`) — main use |
-| `radar_surround.py` | **Heuristic** / multichannel radar (surround if available) |
-| `requiriments.txt` | `pip` dependencies |
+| `collector.py` | Labeled data collection → `samples.csv` |
+| `train.py` | Model training → `model.pkl` |
+| `radar_ml.py` | **Main radar** — stereo + ML |
+| `radar_surround.py` | Heuristic multichannel radar |
+| `requiriments.txt` | pip dependencies |
 | `demonstration.mp4` | Demo video |
 
 ---
 
 ## Ethical & Usage Note
 
-Using any tool that alters competitive advantage in **online games** may violate the game's **terms of service** and result in a ban. This README describes the project for technical transparency; responsibility for use is yours.
+Using tools that alter competitive advantage in **online games** may violate the game's **terms of service** and result in a ban. This project is shared for technical transparency — use at your own responsibility.
 
 ---
-
 ---
 
 # 🇧🇷 Acoustic ESP — Radar Acústico (PT-BR)
@@ -177,128 +168,119 @@ Vídeo de exemplo na raiz do repositório: [`demonstration.mp4`](demonstration.m
 ### Prints
 
 | Collector UI | Demo em jogo |
-|---|---|
+|:---:|:---:|
 | ![Collector UI](prints/collector-ui.png) | ![In-game Demo](prints/in-game-demo-ui.png) |
 
 ---
 
 ## Visão geral
 
-Projeto de **radar acústico**: estimar **direção (ângulo)** e **distância relativa** ao jogador a partir do som capturado (ex.: passos), usando **estéreo + aprendizado de máquina**, em vez de depender de **8 canais crus de surround 7.1**.
+Projeto de **radar acústico**: estimar **direção (ângulo)** e **distância relativa** ao jogador a partir do som capturado (ex.: passos), usando **estéreo + aprendizado de máquina**, em vez de depender de 8 canais crus de surround 7.1.
 
 ---
 
-## Intuito e diferença em relação a "ESP por 7.1"
+## Como funciona e diferença do "ESP por 7.1"
 
-Muitas abordagens tentam ler **cada alto-falante virtual** do mix **7.1** (FL, FR, RL, RR, etc.) para saber de onde veio o som. Esse repositório **não** é focado nesse caminho.
+Muitas abordagens tentam ler cada alto-falante virtual do mix **7.1** (FL, FR, RL, RR, etc.) para detectar a origem do som. Esse projeto toma um caminho diferente:
 
-O fluxo principal aqui é:
+1. Captura um sinal **estéreo** (L/R) roteado por um cabo virtual (ex.: VB-Audio Cable)
+2. Extrai **features no domínio da frequência** — correlação L/R, fase, energia por banda — as mesmas pistas que o cérebro usa com dois ouvidos
+3. Treina um classificador **scikit-learn** para mapear essas features para **ângulos** discretos (0°, 45°, …, 315°), usando **intensidade** como proxy de distância
 
-1. Capturar um sinal **estéreo** (esquerda/direita), por exemplo o que sai do jogo já roteado para um **cabo virtual** (VB-Audio Cable, etc.)
-2. Extrair **features** no domínio da frequência, correlação L/R, fase, energia por banda — o mesmo tipo de pistas que o cérebro usa com **duas orelhas**
-3. Treinar um classificador (**scikit-learn**) para mapear essas features para **ângulos** discretos (0°, 45°, …, 315°) e usar a **intensidade** como proxy de **"quão perto"** no radar
+Quando o jogo usa **HRTF** (*Head-Related Transfer Function*), o par estéreo já carrega informação direcional — não é necessário decodificar 7.1 canal a canal. O modelo aprende esses padrões diretamente do sinal L/R.
 
-Quando o jogo está em **fone com espacialização**, o que costuma chegar no cabo é **estéreo já processado** por algo equivalente a **HRTF** (*Head-Related Transfer Function* — filtros e atrasos que simulam como o som chega a cada ouvido). Ou seja: **não** é necessário decodificar 7.1 canal a canal; o modelo aprende padrões no **par L/R** que o próprio jogo + HRTF já condicionaram à direção.
-
-O script `radar_surround.py` é a variante **heurística / multicanal**. O fluxo recomendado é **`collector.py` → `train.py` → `radar_ml.py`**.
+> `radar_surround.py` é a variante heurística/multicanal para quando o dispositivo expõe 6+ canais. O fluxo principal recomendado é **`collector.py` → `train.py` → `radar_ml.py`**.
 
 ---
 
 ## Roadmap
 
-1. **Fase atual — radar acústico**
-   Indicar **direção** e **distância visual relativa** (raio no radar) em relação ao jogador, com base em eventos sonoros (ex.: passos).
+| Fase | Status | Descrição |
+|------|--------|-----------|
+| Radar acústico | ✅ Atual | Direção + distância relativa no radar 2D a partir de eventos sonoros |
+| Wallhack acústico | 🔜 Planejado | Manter última posição estimada / trilha recente na tela, não só um ping momentâneo |
 
-2. **Evolução desejada**
-   Caminhar para um **"wallhack" acústico**: manter no mapa/tela a **última posição estimada** (ou trilha recente) derivada do barulho, não só um ping momentâneo.
-
-*(Fase 2 depende de integração com minimapa/world space.)*
+> Fase 2 depende de integração com minimapa/world space.
 
 ---
 
 ## Pré-requisitos
 
-- **Python 3.10+** (recomendado 3.11 ou 3.12 no Windows)
-- **VB-Audio Virtual Cable** (ou equivalente)
-- No Windows: saída do jogo → **CABLE Input**; o app Python usa **CABLE Output** como **microfone de entrada**
+- Python 3.10+ (recomendado 3.11 ou 3.12 no Windows)
+- Um **dispositivo de áudio 7.1** definido como saída principal — ou um virtual (veja o setup abaixo)
+- **VB-Audio Virtual Cable** ou equivalente para roteamento de áudio
 
 ---
 
-
-## Configuração do dispositivo de áudio
-
-É necessário um **dispositivo de áudio 7.1** configurado como saída principal. Se sua placa de som ou fone não suportar nativamente, use um dispositivo virtual.
+## Etapa 1 — Configuração do dispositivo de áudio
 
 > **Referência / inspiração:** [CanetisRadar by SamuelTulach](https://github.com/SamuelTulach/CanetisRadar)
 
-### Opção 1 — Usar seu dispositivo atual
-Verifique se sua placa de som ou headset já suporta surround 7.1. Se sim, pule para o setup principal.
+É necessário um **dispositivo surround 7.1** como saída padrão. Verifique se sua placa de som ou headset já suporta — se sim, pule para a Etapa 2.
 
-### Opção 2 — Dispositivo virtual (recomendado)
+Caso contrário, use um dispositivo virtual:
 
-1. Baixe o **[VB-Cable](https://www.vb-audio.com/Cable/)** (alternativa melhor: **[Razer Surround](https://www.razer.com/surround)**)
-2. Instale
-3. Reinicie o PC
-4. Abra **Configurações de Som → aba Reprodução**
-5. Defina **CABLE Input** como dispositivo padrão
-6. Clique em **Configurar** → selecione **Surround 7.1** e habilite todos os alto-falantes
-7. Vá para a **aba Gravação**
-8. Clique em **CABLE Output** → **Propriedades → aba Ouvir**
-9. Marque **"Ouvir este dispositivo"**
-10. Selecione seu dispositivo de reprodução normal (fone/caixas reais)
-11. Pronto — o áudio do jogo agora passa pelo dispositivo 7.1 virtual
+1. Baixe o **[VB-Cable](https://www.vb-audio.com/Cable/)** *(ou a alternativa melhor: **[Razer Surround](https://www.razer.com/surround)**)*
+2. Instale e **reinicie o PC**
+3. Abra **Configurações de Som → aba Reprodução**
+4. Defina **CABLE Input** como dispositivo padrão
+5. Clique em **Configurar** → selecione **Surround 7.1** e habilite todos os alto-falantes
+6. Vá para a **aba Gravação** → clique em **CABLE Output** → **Propriedades**
+7. Vá para a **aba Ouvir** → marque **"Ouvir este dispositivo"**
+8. Selecione seu fone/caixa real como dispositivo de reprodução
+9. Pronto — o áudio do jogo agora passa pelo dispositivo 7.1 virtual
 
 ---
 
-## Setup no Windows
+## Etapa 2 — Setup do Python
 
-1. **Instale o Python** em [python.org](https://www.python.org/downloads/) — marque **"Add python.exe to PATH"**
+1. Instale o Python em [python.org](https://www.python.org/downloads/) — marque **"Add python.exe to PATH"**
 
-2. **Ambiente virtual**:
+2. Crie um ambiente virtual:
 ```powershell
-   cd C:\caminho\para\acoustic-esp
-   python -m venv .venv
-   .\.venv\Scripts\activate
+cd C:\caminho\para\acoustic-esp
+python -m venv .venv
+.\.venv\Scripts\activate
 ```
 
-3. **Dependências**:
+3. Instale as dependências:
 ```powershell
-   pip install -r requiriments.txt
+pip install -r requiriments.txt
 ```
 
 4. **PyAudio no Windows** — se `pip install PyAudio` falhar:
-   - Wheel não oficial: [lfd.uci.edu/~gohlke/pythonlibs/#pyaudio](https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyaudio), ou
-   - `pip install pipwin` → `pipwin install pyaudio`
+   - [Wheel não oficial](https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyaudio) — baixe o `.whl` para sua versão do Python e rode `pip install <arquivo>.whl`
+   - Ou: `pip install pipwin` depois `pipwin install pyaudio`
 
-6. **Tkinter** — vem com o instalador oficial. Se faltar, reinstale marcando **tcl/tk**
-
----
-
-## Como rodar
-
-| Etapa | Comando | O que faz |
-|-------|---------|-----------|
-| 1. Coletar dados | `python collector.py` | Abre a UI, grava `samples.csv` ao pressionar as teclas do **numpad** |
-| 2. Treinar modelo | `python train.py` | Lê `samples.csv`, treina e grava `model.pkl` |
-| 3. Radar em tempo real | `python radar_ml.py` | Usa `model.pkl` + áudio estéreo do cabo; mostra pings no radar |
-
-**Opcional:** `python radar_surround.py` — radar sem modelo, com lógica surround.
+5. **Tkinter** — vem com o instalador oficial. Se faltar, reinstale o Python marcando o componente **tcl/tk**.
 
 ---
 
-## Arquivos importantes
+## Etapa 3 — Rodando
+
+| # | Comando | O que faz |
+|---|---------|-----------|
+| 1 | `python collector.py` | Abre a UI — pressione teclas do **numpad** ao ouvir passos para rotular direções → salva `samples.csv` |
+| 2 | `python train.py` | Lê `samples.csv`, treina o classificador, salva `model.pkl` |
+| 3 | `python radar_ml.py` | Carrega `model.pkl` + áudio estéreo ao vivo → exibe pings direcionais no radar |
+
+**Opcional:** `python radar_surround.py` — radar heurístico sem ML, usa canais surround se o dispositivo expõe 6+.
+
+---
+
+## Arquivos
 
 | Arquivo | Função |
 |---------|--------|
 | `collector.py` | Coleta rotulada → `samples.csv` |
-| `train.py` | Treino → `model.pkl` |
-| `radar_ml.py` | Radar com **ML** — uso principal |
-| `radar_surround.py` | Radar heurístico / multicanal |
-| `requiriments.txt` | Dependências `pip` |
+| `train.py` | Treino do modelo → `model.pkl` |
+| `radar_ml.py` | **Radar principal** — estéreo + ML |
+| `radar_surround.py` | Radar heurístico multicanal |
+| `requiriments.txt` | Dependências pip |
 | `demonstration.mp4` | Vídeo de demonstração |
 
 ---
 
 ## Nota ética e de uso
 
-Usar qualquer ferramenta que altere vantagem competitiva em **jogos online** pode violar os **termos de serviço** do jogo e resultar em banimento. A responsabilidade pelo uso é sua.
+Usar ferramentas que alterem vantagem competitiva em **jogos online** pode violar os **termos de serviço** do jogo e resultar em banimento. Este projeto é compartilhado por transparência técnica — o uso é de sua responsabilidade.
