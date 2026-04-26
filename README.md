@@ -6,9 +6,8 @@
 
 ## Demonstration
 
-Example video in the repository root: [`demonstration.mp4`](demonstration.mp4)
-
-<video src="demonstration.mp4" controls playsinline width="100%"></video>
+Example video in the repository root:
+https://github.com/user-attachments/assets/a9a9d469-68e3-4f19-a557-8c7cbf60c753
 
 ---
 
@@ -150,10 +149,9 @@ Using tools that alter competitive advantage in **online games** may violate the
 
 ## Demonstração
 
-Vídeo de exemplo na raiz do repositório: [`demonstration.mp4`](demonstration.mp4)
+Vídeo de exemplo na raiz do repositório:
 
-<video src="https://raw.githubusercontent.com/Withoutbytes/acoustic-esp/ea9504c219cfec66459872096c175271e83c6781/demonstration.mp4" controls width="100%">
-</video>
+https://github.com/user-attachments/assets/a9a9d469-68e3-4f19-a557-8c7cbf60c753
 
 ---
 
