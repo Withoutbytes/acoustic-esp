@@ -7,6 +7,8 @@
 ## Demonstration
 
 Example video in the repository root:
+
+
 https://github.com/user-attachments/assets/a9a9d469-68e3-4f19-a557-8c7cbf60c753
 
 ---
@@ -150,6 +152,7 @@ Using tools that alter competitive advantage in **online games** may violate the
 ## Demonstração
 
 Vídeo de exemplo na raiz do repositório:
+
 
 https://github.com/user-attachments/assets/a9a9d469-68e3-4f19-a557-8c7cbf60c753
 
