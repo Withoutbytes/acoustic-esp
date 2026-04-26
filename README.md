@@ -9,6 +9,16 @@
 | **`radar_ml.py`** | Quiser o **radar principal**: estéreo + **modelo ML** (`model.pkl`). |
 | **`radar_surround.py`** | Quiser testar **radar sem ML**, por **vários canais** (5.1/7.1) quando o driver expõe surround. |
 
+## Demonstração
+
+Vídeo de exemplo na raiz do repositório: [`demonstration.mp4`](demonstration.mp4).
+
+<video src="demonstration.mp4" controls playsinline width="100%"></video>
+
+Se o player não aparecer (preview local ou algum host de docs), abra o arquivo direto ou use **Download** no GitHub.
+
+---
+
 Projeto de **radar acústico**: estimar **direção (ângulo)** e **distância relativa** ao jogador a partir do som capturado (ex.: passos), usando **estéreo + aprendizado de máquina**, em vez de depender de **8 canais crus de surround 7.1**.
 
 ---
@@ -106,6 +116,7 @@ Ordem sugerida:
 | `radar_ml.py` | Radar com **ML** (estéreo + `model.pkl`) — uso principal |
 | `radar_surround.py` | Radar **heurístico** / multicanal (surround se disponível) |
 | `requiriments.txt` | Dependências `pip` |
+| `demonstration.mp4` | Vídeo de demonstração (ver secção **Demonstração** acima) |
 
 ---
 
