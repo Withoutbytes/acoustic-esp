@@ -1,0 +1,4 @@
+# acoustic-esp — dependências de pip (stdlib + tkinter não entram aqui)
+numpy>=1.24.0
+scikit-learn>=1.3.0
+PyAudio>=0.2.14
