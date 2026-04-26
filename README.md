@@ -152,7 +152,8 @@ Using tools that alter competitive advantage in **online games** may violate the
 
 Vídeo de exemplo na raiz do repositório: [`demonstration.mp4`](demonstration.mp4)
 
-https://github.com/Withoutbytes/acoustic-esp/blob/56960fcfaf9b2617b0a7c53a584618716ef2f89d/demonstration.mp4
+<video src="https://raw.githubusercontent.com/Withoutbytes/acoustic-esp/ea9504c219cfec66459872096c175271e83c6781/demonstration.mp4" controls width="100%">
+</video>
 
 ---
 
